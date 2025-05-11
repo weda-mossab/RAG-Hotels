@@ -1,0 +1,13 @@
+
+fastapi
+uvicorn
+langchain
+langchain-groq
+langchain-community
+sentence-transformers
+chromadb
+pandas
+python-multipart
+
+langchain
+langchain-groq
