@@ -68,7 +68,7 @@ for ville in villes:
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.d4924c9e74[data-results-container='1']"))
         )
     except:
-        print("⚠️ Aucun hôtel trouvé, vérifie les sélecteurs CSS !")
+        print("Aucun hôtel trouvé, vérifie les sélecteurs CSS !")
         driver.quit()
         exit()
 
