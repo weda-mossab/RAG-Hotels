@@ -128,4 +128,4 @@ for i in range(0, 1000):
     existing_hotels = combined_hotels
     existing_reviews = combined_reviews
 
-print("Scraping terminé avec succès ✅.")
+print("Scraping terminé avec succès .")
