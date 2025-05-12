@@ -6,41 +6,20 @@ function App() {
   const [input, setInput] = useState('');
   const [conversation, setConversation] = useState([]);
   const [conversationId, setConversationId] = useState(null);
-  const [conversationsList, setConversationsList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [userId] = useState(() => localStorage.getItem('userId') || String(Math.random().toString(36).substring(2, 15)));
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem('userId', userId);
-    fetchConversations();
-  }, [userId]);
-
-  useEffect(() => {
-    if (conversationId) {
-      fetchConversation(conversationId);
-      localStorage.setItem('currentConversationId', conversationId);
+    const savedId = localStorage.getItem('conversationId');
+    if (savedId) {
+      setConversationId(savedId);
+      fetchConversation(savedId);
     }
-  }, [conversationId]);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
-
-  const fetchConversations = async () => {
-    try {
-      const response = await axios.get(`http://localhost:8000/conversations/${userId}`);
-      setConversationsList(response.data.conversations);
-      
-      // Load last conversation if none is selected
-      if (!conversationId && response.data.conversations.length > 0) {
-        const lastConvId = response.data.conversations[0].id;
-        setConversationId(lastConvId);
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    }
-  };
 
   const fetchConversation = async (id) => {
     try {
@@ -51,22 +30,11 @@ function App() {
     }
   };
 
-  const startNewConversation = async () => {
-    try {
-      const response = await axios.post('http://localhost:8000/new-conversation', {
-        user_id: userId
-      });
-      setConversationId(response.data.conversation_id);
-      fetchConversations();
-    } catch (error) {
-      console.error('Error creating new conversation:', error);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
     
+    // Add user message immediately to conversation
     const userMessage = {
       id: Date.now().toString(),
       content: input,
@@ -84,8 +52,14 @@ function App() {
         conversation_id: conversationId
       });
       
-      setConversation(prev => [...prev, ...response.data.messages]);
-      fetchConversations(); // Refresh conversation list
+      if (!conversationId) {
+        setConversationId(response.data.conversation_id);
+        localStorage.setItem('conversationId', response.data.conversation_id);
+      }
+      
+      // Add bot response to conversation
+      const botMessage = response.data.messages[0];
+      setConversation(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Error:', error);
       setConversation(prev => [...prev, {
@@ -99,45 +73,40 @@ function App() {
     }
   };
 
+  const clearConversation = () => {
+    setConversation([]);
+    setConversationId(null);
+    localStorage.removeItem('conversationId');
+  };
+
   return (
     <div className="app">
-      <div className="sidebar">
-        <button onClick={startNewConversation} className="new-chat-btn">
-          + Nouvelle discussion
-        </button>
-        <div className="conversations-list">
-          {conversationsList.map(conv => (
-            <div 
-              key={conv.id} 
-              className={`conversation-item ${conv.id === conversationId ? 'active' : ''}`}
-              onClick={() => setConversationId(conv.id)}
-            >
-              <div className="conversation-preview">
-                {conv.preview.length > 30 ? conv.preview.substring(0, 30) + '...' : conv.preview}
-              </div>
-              <div className="conversation-date">
-                {new Date(conv.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
       <div className="chat-container">
         <div className="chat-header">
-          <h1>Assistant Hôtelier</h1>
+          <h1>Assistant Hôtelier Tunisien</h1>
+          <button onClick={clearConversation} className="clear-btn">
+            Nouvelle Discussion
+          </button>
         </div>
         
         <div className="messages">
           {conversation.length === 0 ? (
             <div className="welcome-message">
               <p>Bienvenue ! Posez-moi des questions sur les hôtels en Tunisie.</p>
+              <p>Exemples :</p>
+              <ul>
+                <li>Quels hôtels 5 étoiles recommandez-vous à Tunis ?</li>
+                <li>Quels sont les hôtels avec piscine à Sousse ?</li>
+                <li>Donnez-moi des hôtels pas chers à Djerba</li>
+              </ul>
             </div>
           ) : (
             conversation.map((msg) => (
               <div key={msg.id} className={`message ${msg.sender}`}>
                 <div className="message-content">
-                  {msg.content}
+                  {msg.content.split('\n').map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
                 </div>
                 <div className="message-timestamp">
                   {new Date(msg.timestamp).toLocaleTimeString()}
